@@ -1,0 +1,43 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong!Passw0rd
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/opt/mssql-tools/bin/sqlcmd",
+          "-S", "127.0.0.1",
+          "-U", "sa",
+          "-P", "YourStrong!Passw0rd",
+          "-Q", "SELECT 1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    networks:
+      - apinet
+
+  api:
+    build:
+      context: ./ApiProductos/ApiProductos
+      dockerfile: Dockerfile
+    container_name: api
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=ProductDB;User=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=true;"
+    ports:
+      - "8080:80"
+    networks:
+      - apinet
+
+networks:
+  apinet:
