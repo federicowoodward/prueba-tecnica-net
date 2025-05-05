@@ -1,26 +1,11 @@
 services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sqlserver
+  mysql:
+    image: mysql:8.0
     environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong!Passw0rd
-      - MSSQL_PID=Developer
+      MYSQL_ROOT_PASSWORD: 12345678
+      MYSQL_DATABASE: testapi
     ports:
-      - "1433:1433"
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "/opt/mssql-tools/bin/sqlcmd",
-          "-S", "127.0.0.1",
-          "-U", "sa",
-          "-P", "YourStrong!Passw0rd",
-          "-Q", "SELECT 1"
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 30
+      - "3307:3306"
     networks:
       - apinet
 
@@ -28,14 +13,14 @@ services:
     build:
       context: ./ApiProductos/ApiProductos
       dockerfile: Dockerfile
-    container_name: api
-    depends_on:
-      sqlserver:
-        condition: service_healthy
-    environment:
-      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=ProductDB;User=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=true;"
     ports:
       - "8080:80"
+    container_name: api
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=testapi;User ID=root;Password=12345678;allowPublicKeyRetrieval=True;"
+    depends_on:
+      - mysql
+    command: sh -c "until mysql -h mysql -u root -p12345678 -e 'SELECT 1'; do echo 'Waiting for MySQL...'; sleep 2; done; dotnet ef database update; dotnet ApiProductos.dll"
     networks:
       - apinet
 
